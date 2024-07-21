@@ -1,0 +1,159 @@
+---
+title: "Datos Abiertos de Incidencia Delictiva"
+author: "Diana Villasana Ocampo"
+output:
+   html_notebook:
+      highlight: tango
+      theme: flatly
+      toc: yes
+      toc_depth: 3
+      toc_float:
+        collapsed: yes
+---
+
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache = FALSE, cache.lazy = FALSE, 
+                         eval = TRUE, class.source = "fold-show")
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+options(digits = 2, encoding = "UTF8")
+```   
+ 
+
+```{r, echo=FALSE}
+rm(list = ls())
+```
+
+```{r, echo=FALSE}
+setwd(here::here())
+```
+
+
+```{r, echo = FALSE}
+require(tidyverse)
+require(data.table)
+require(stringr)
+require(gt)
+```
+# Incidencia delictiva   
+
+Son los datos reportados por las Procuradurías de Justicia y Fiscalías Generales de las Entidades Federativas, en el caso del fuero común y por la Procuraduría General de la República, en el caso del fuero federal, referentes a los presuntos delitos registrados en carpetas de investigación iniciadas.  
+
+La información sirve para:  
+
+- Conocer mes a mes la cantidad y tipo de delitos que se cometen a nivel nacional, en las entidades federativas y en los municipios del país.
+- Identificar las características de las víctimas para los delitos alto impacto y otros de interés para la sociedad.   
+- Realizar análisis sobre el fenómeno delictivo a escalas nacional, regional, estatal y/o municipal.   
+- Elaborar análisis de los patrones delictivos tanto en el tiempo como entre áreas geográficas específicas.   
+- Generar estrategias focalizadas de intervención policial.  
+- Evaluar y diseñar políticas públicas de prevención y/o combate al delito.   
+
+## SESNP    
+
+El [Secretariado Ejecutivo del Sistema Nacional de Seguridad Pública](https://www.gob.mx/sesnsp) cuenta con autonomía técnica, de gestión y presupuestal, cuyo propósito es ejecutar y dar seguimiento a los acuerdos del Consejo Nacional de Seguridad Pública, instancia superior de coordinación y de definición de las políticas públicas en materia de seguridad pública; por lo tanto es el órgano operativo, el eje de coordinación entre las instancias federales, estatales y municipales responsables de la función de salvaguardar la integridad de las personas, la seguridad ciudadana, así como de preservar el orden y la paz públicos.
+
+## Datos Abiertos de Incidencia Delictiva  
+
+En este [enlace](https://www.gob.mx/sesnsp/acciones-y-programas/datos-abiertos-de-incidencia-delictiva?state=published) se podrá encontrar los archivos de datos abiertos referentes a incidencia delictiva, así como sus diccionarios de datos. Esta información es accesible desde el portal datos.gob.mx del gobierno federal.  
+
+
+**Se cargan los reportes de incidencia delictiva al mes de junio 2024** 
+
+```{r}
+data = fread(file = "C:/Users/dvill/OneDrive/Escritorio/Bivariate_example_map/Bases/IDM_NM_jun24.csv", 
+             header = TRUE, 
+             sep = ",", 
+             encoding=  "Latin-1")
+```
+
+
+```{r}
+data <- data %>%
+         mutate(Clave_Ent = str_pad(.$Clave_Ent, width = 2, side = c("left"), pad = 0),
+                `Cve. Municipio` = str_pad(.$`Cve. Municipio`, width = 5, side = c("left"), pad = 0)) %>%
+          rename("CVE_MUN" = `Cve. Municipio`) %>%
+           mutate(Total = rowSums(.[, 10:21], na.rm = TRUE))
+```
+
+
+## Subtipos de delitos   
+
+```{r}
+tabla <- unique(data$`Subtipo de delito`) %>%
+          as.data.frame() %>%
+           rename("Subtipo de delito" = ".")
+
+tabla %>%  
+  gt() %>% 
+   tab_header(title = "Incidencia Delictiva", 
+              subtitle = "Nivel municipal") %>%
+    tab_options(heading.title.font.size = 14, 
+                heading.align = "center",
+                heading.subtitle.font.size = 12,
+                data_row.padding = px(1),
+                column_labels.font.weight = "bold",
+                column_labels.padding = px(10), 
+                table.font.names = 'Century Gothic',
+                table.font.size = 10) %>%
+     tab_style(style = list(cell_text(align = "center",
+                                      weight = 'bold')),
+               locations = list(cells_title(groups = c("title")))) 
+```
+
+
+Para fines prácticos se filtra la base de datos por subtipo de delitos como: Homicidios dolosos y Feminicidios. Y ambos filtros se guardaran en un archivo nativo  .RData.  Además de que se evaluaran los hocidios del año 2023. 
+
+```{r}
+Homicidios <- data %>%
+               filter(`Subtipo de delito` %in% "Homicidio doloso") %>% 
+                filter(Año %in% "2023") %>%
+                 group_by(CVE_MUN, `Subtipo de delito`) %>%
+                  summarise(Total_Homcidios = sum(Total, na.rm = TRUE), .groups = "drop")
+
+save(Homicidios, file = paste0(here::here(), "/Output/Homicidios.RData"))
+```
+
+```{r}
+Feminicidios <- data %>%
+                 filter(`Subtipo de delito` %in% "Feminicidio") %>% 
+                  filter(Año %in% "2023") %>%
+                   group_by(CVE_MUN, `Subtipo de delito`) %>%
+                    summarise(Total_Feminicidios = sum(Total, na.rm = TRUE), .groups = "drop")
+
+save(Feminicidios, file = paste0(here::here(), "/Output/Feminicidios.RData"))
+```
+
+
+## Proyecciones de Población   
+
+Las proyecciones de población proporcionan una referencia del futuro tamaño y estructura por edades de una población, basados en un conjunto de supuestos sobre el comportamiento de los componentes demográficos fecundidad, mortalidad y migración.    
+
+Para evaluar la tasa de homicdios y de feminicidios, se debe de tomar en consideración a la población referente al año 2023. Por lo que hacemos uso de las [Proyecciones de la población de los municipios de México 1990-2040](https://www.gob.mx/conapo/documentos/reconstruccion-y-proyecciones-de-la-poblacion-de-los-municipios-de-mexico-1990-2040), elaborado por el CONAPO.   
+
+
+```{r}
+require(openxlsx)
+tabla1 <- read.xlsx(paste0(here::here(), "/Bases/Proyecciones de la Población de México.xlsx"), 
+                    sheet = "Proyeciones_Municipio(1)", 
+                    startRow = 5, 
+                    colNames = TRUE)
+tabla2 <- read.xlsx(paste0(here::here(), "/Bases/Proyecciones de la Población de México.xlsx"), 
+                    sheet = "Proyecciones_Municipio(2)", 
+                    startRow = 5, 
+                    colNames = TRUE)
+
+data <- rbind(tabla1, tabla2)
+
+data <- data %>%
+         rename("CVE_MUN" = "CLAVE",
+                "CVE_ENT" = "CLAVE_ENT") %>% 
+          mutate(CVE_ENT = str_pad(.$CVE_ENT, width = 2, side = c("left"), pad = 0),
+                 CVE_MUN = str_pad(.$CVE_MUN, width = 5, side = c("left"), pad = 0))
+data <- data %>%
+         group_by(CVE_MUN, AÑO) %>%
+          summarise(POB_TOT = sum(POB, na.rm = TRUE), .groups = "drop") %>%
+           filter(AÑO %in% 2023)
+
+save(data, file = paste0(here::here(), "/Output/Proyecciones_Poblacion.RData"))
+```
+
