@@ -1,0 +1,180 @@
+---
+title: "Biscale legend"
+author: "Diana Villasana Ocampo"
+output:
+   html_notebook:
+      highlight: tango
+      theme: flatly
+      toc: yes
+      toc_depth: 3
+      toc_float:
+        collapsed: yes
+---
+
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache = FALSE, cache.lazy = FALSE, 
+                         eval = TRUE, class.source = "fold-show")
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+options(digits = 2, encoding = "UTF8")
+```   
+ 
+
+```{r, echo=FALSE}
+rm(list = ls())
+```
+
+```{r, echo=FALSE}
+setwd(here::here())
+```
+
+## Bivariate maps 
+
+El objetivo de `biscale` es implementar un enfoque consistente para el mapeo bivariado completamente dentro de R. El flujo de trabajo del paquete se basa en un tutorial de 2019 escrito por Timo Grossenbacher y Angelo Zehr. `biscale` también contiene un conjunto de paletas de mapeo bivariado, incluyendo los esquemas de color clásicos de [Joshua Stevens](https://www.joshuastevens.net/cartography/make-a-bivariate-choropleth-map/).     
+
+Github (`biscale`): https://github.com/chris-prener/biscale      
+**Bivariate Pallettes**: https://chris-prener.github.io/biscale/articles/bivariate_palettes.html    
+**Enlace**: https://cran.r-project.org/web/packages/biscale/vignettes/biscale.html     
+
+La otra dependencia sugerida que los usuarios pueden considerar instalar es cowplot. Todos los ejemplos de la documentación del paquete la utilizan para construir imágenes de mapa finales que combinan el mapa con la leyenda.  
+Al igual que sf, se sugiere porque ninguna de las funciones de biscale llama directamente a cowplot.  
+
+**Libraries** 
+
+```{r}
+require(biscale)
+require(corrplot)
+require(sf)
+```
+
+## Data
+
+`biscale` contiene un conjunto de datos de secciones censales de EE.UU. para la ciudad de San Luis, en Misuri. Se incluyen tanto la renta media como el porcentaje de residentes blancos, que pueden utilizarse para demostrar la funcionalidad del paquete.
+
+El argumento `dim` se utiliza para controlar la extensión de la leyenda: ¿desea producir un mapa de dos por dos (`dim = 2`), de tres por tres (`dim = 3`) o de cuatro por cuatro (dim = 4). Teniendo en cuenta que el soporte para mapas de cuatro por cuatro es nuevo a partir de la `versión 1.0.0`.    
+
+Las clases pueden aplicarse con el parámetro de `style` utilizando cuatro enfoques para calcular los cortes:  `quantile` (default), `equal`, `fisher`, and `jenks`.     
+
+```{r}
+data = stl_race_income
+
+# create classes
+data <- bi_class(stl_race_income, x = pctWhite, y = medInc, style = "quantile", dim = 3)
+```
+
+
+
+## Bivariate Mapping with Biscale   
+
+### Creating Maps    
+
+Una vez creados los cortes, podemos utilizar `bi_scale_fill()` como parte de ggplot():    
+ 
+```{r}
+# create map
+map <- ggplot() +
+        geom_sf(data = data, mapping = aes(fill = bi_class), color = "white", size = 0.1, show.legend = FALSE) +
+         bi_scale_fill(pal = "GrPink", dim = 3) +
+          labs(
+            title = "Race and Income in St. Louis, MO",
+            subtitle = "Gray Pink (GrPink) Palette"
+          ) +
+          bi_theme() + 
+           theme(plot.title = element_text(size = 14),
+                 plot.subtitle = element_text(size = 12))
+map
+```
+Se requiere que la variable bi_class, creada con `bi_class()`, se utilice como variable de relleno en el mapeo. También se quiere eliminar la leyenda del gráfico, ya que no comunicará con precisión la complejidad de la escala bivariada.    
+
+Si está mapeando datos puntuales, existe una función alternativa `bi_scale_color()` que funciona del mismo modo que `bi_scale_fill()`. Las dimensiones de la escala deben suministrarse de nuevo para bi_scale_fill() (¡deben coincidir con las dimensiones dadas para `bi_class()`!), y debe darse una paleta.   
+
+El ejemplo anterior también incluye bi`_theme(),` que se basa en el tema diseñado por Timo Grossenbacher y Angelo Zehr. Este tema crea un lienzo simple y limpio para el mapeo bivariante que elimina cualquier posible elemento de distracción.   
+
+###  Creating Legends  
+
+Se ha establecido previamente `show.legend = FALSE` para que se pueda añadir (manualmente) la propia leyenda bivariada. La propia leyenda se puede crear con la función `bi_legend()`:     
+
+```{r}
+legend <- bi_legend(pal = "GrPink",
+                    dim = 3,
+                    xlab = "Higher % White ",
+                    ylab = "Higher Income ",
+                    size = 8)
+```
+
+La paleta y las dimensiones deben coincidir con lo que se ha utilizado tanto para `bi_class()` (en términos de dimensiones) como para `bi_scale_fill()` (tanto en términos de dimensiones como de paleta). 
+El argumento `size` controla el tamaño de fuente utilizado en la leyenda. 
+Teniendo en cuenta que `plotmath` se utiliza para dibujar las flechas ya que las flechas Unicode dependen de la fuente. Esto ocurre internamente como parte de `bi_legend()`.    
+
+### Creating a Final Output 
+
+La leyenda dibujada, se puede combinar la leyenda y el mapa con el paquete como `cowplot`, mediante la función `cowplot::draw_plot()`. Los valores necesarios para esta etapa serán objeto de experimentación en función de la forma del propio mapa.    
+
+```{r}
+# combine map with legend
+finalPlot <- ggdraw() +
+              draw_plot(map, 0, 0, 1, 1) +
+              draw_plot(legend, 0.2, 0.65, 0.2, 0.2)
+finalPlot
+```
+
+
+### Bivariate Palettes   
+
+Para facilitar aún más la flexibilidad con las paletas, las funciones biscale incluyen dos argumentos adicionales para manipular su disposición.   
+
+Se invertirá los colores asignados a los ejes x e y. La inversión de los ejes se realiza con el argumento `flip_axes`. 
+
+Rotar la paleta (con el argumento `rotate_pal`) rotará los colores 180 grados, dando como resultado una paleta que resalta los valores bajos frente a los altos. Al girar la paleta se rota 180 grados toda la escala de colores.  
+
+```{r, echo = TRUE}
+bi_pal(pal = "PurpleOr", dim = 3, flip_axes = TRUE)
+```
+
+### Costum Palettes    
+
+Se crea una paleta de colores con `colorRampPalette`:     
+
+1. Define la paleta base de colores.    
+2. Usa `colorRampPalette` para generar una paleta de colores del tamaño necesario.      
+3. Se asignan los nombres únicos ordenados a los colores utilizando `setNames`.    
+
+```{r, echo = TRUE}
+dims <- paste0(rep(seq(1:3), 3), "-", rep(seq(from = 1, to = 3), each = 3))
+
+custom_pal <-setNames(object = colorRampPalette(pals::kovesi.linear_bmy_10_95_c78(100))(length(dims)),
+                       nm = dims)
+
+bi_pal(pal = custom_pal, dim = 3, flip_axes = TRUE)
+```
+
+
+Si crea una paleta personalizada para un mapa de tres por tres (`dim = 3`), debe ampliar cada fila y columna en 1 para que 3-1 y 3-2 se incluyan en el vector junto con 1-3, 2-3 y 3-3. El vector con nombre debe tener 9 valores en total.   
+
+```{r}
+# create map
+map <- ggplot() +
+        geom_sf(data = data, 
+                mapping = aes(fill = bi_class), 
+                color = "white", 
+                size = 0.1, 
+                show.legend = FALSE) +
+         bi_theme() + 
+          theme(plot.title = element_text(size = 14),
+                plot.subtitle = element_text(size = 12)) +
+            bi_scale_fill(pal = custom_pal, dim = 3) +
+             labs(title = "Race and Income in St. Louis, MO",
+                  subtitle = "Gray Pink (GrPink) Palette") 
+
+legend <- bi_legend(pal = custom_pal,
+                    dim = 3,
+                    xlab = "Higher % White ",
+                    ylab = "Higher Income ",
+                    size = 8)
+
+# combine map with legend
+finalPlot <- ggdraw() +
+              draw_plot(map, 0, 0, 1, 1) +
+               draw_plot(legend, x = 0.7, y = 0, width = 0.3, height =  0.3)
+finalPlot
+```
