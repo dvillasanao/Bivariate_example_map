@@ -1,0 +1,252 @@
+---
+title: "Bivariate Maps"
+author: "Diana Villasana Ocampo"
+output:
+   html_notebook:
+      highlight: tango
+      theme: flatly
+      toc: yes
+      toc_depth: 3
+      toc_float:
+        collapsed: yes
+---
+
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache = FALSE, cache.lazy = FALSE, 
+                         eval = TRUE, class.source = "fold-show")
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+options(digits = 2, encoding = "UTF8")
+```   
+ 
+
+```{r, echo=FALSE}
+rm(list = ls())
+```
+
+```{r, echo=FALSE}
+setwd(here::here())
+```
+
+```{r, echo = FALSE, results=FALSE}
+require(dplyr)
+require(ggplot2)
+require(sf)
+require(geojsonio)
+require(rgdal)
+require(sp)             # Classes and Methos for Spatial Data
+require(spdplyr)
+require(raster)
+require(viridis)
+require(cowplot)
+options(Ncpus = 8)
+```
+
+# Bases 
+
+```{r}
+load(file = paste0(here::here(), "/Output/Homicidios.RData"))
+load(file = paste0(here::here(), "/Output/Feminicidios.RData"))
+load(file = paste0(here::here(), "/Output/Proyecciones_Poblacion.RData"))
+```
+
+```{r}
+data <- poblacion %>%
+         left_join(., Homicidios, by = c("CVE_MUN")) %>%
+          left_join(., Feminicidios, by = c("CVE_MUN")) 
+# Se calculan la tasas de homicidos
+data <- data %>% 
+         mutate(T_Homicidios = ifelse(is.na(.$Total_Homcidios/.$POB_TOT), 0, .$Total_Homcidios/.$POB_TOT * 10000),
+                T_Feminicidio = ifelse(is.na(.$Total_Feminicidios/.$POB_TOT), 0, .$Total_Feminicidios/.$POB_TOT * 10000))
+```
+
+# Layers 
+
+```{r}
+shape_estados <- geojsonio::geojson_read(paste0(here::here(),  "/Output/capa_estados_2023_json.geojson"), what = "sp") 
+shape_municipios <- geojsonio::geojson_read(paste0(here::here(), "/Output/capa_municipios_2023_json.geojson"), what = "sp")
+```
+
+```{r}
+shape_estados <- shape_estados %>% 
+                  sp::spChFIDs(., str_pad(.@data$CVE_ENT, 2, "left", pad = "0"))
+
+shape_municipios <- shape_municipios %>% 
+                     sp::spChFIDs(., str_pad(.@data$CVE_MUN, 5, "left", pad = "0"))
+```
+
+```{r}
+# read in raster of cem
+cem <- raster("D:/CEM/Nacional15_r30m.asc") %>%
+        # hide relief outside of Switzerland by masking with country borders
+       # mask(shape_estados) %>%
+         as("SpatialPixelsDataFrame") %>%
+          as.data.frame() 
+
+cem_df <- as.data.frame(rasterToPoints(cem))
+
+# Cambia los nombres de las columnas para usar con ggplot2
+colnames(cem_df) <- c("x", "y", "value")
+
+saveRDS(cem, file = paste0(here::here(), "Output/cem.RDS"))
+```
+
+
+### Join Geodata with Thematic Data
+
+In the following chunk, the municipality geodata is extended (joined) with the thematic data over each municipality's unique identifier, so we end up with a data frame consisting of the thematic data as well as the geometries. Note that the class of this resulting object is still `sf` as well as `data.frame`.
+
+```{r join data into shapefiles, echo=TRUE, message=FALSE, warning=FALSE}
+require(magrittr)
+shape_municipios %<>%
+  left_join(., data,  by = c("CVE_MUN"))
+```
+
+```{r define map theme, echo=TRUE, message=FALSE, warning=FALSE}
+# some constants
+default_font_color <- "#4e4d47"
+default_background_color <- "#f5f5f2"
+default_font_family <- "Ubuntu Regular"
+default_caption <- paste0("Map CC-BY-SA; Code: ",
+                          "github.com/grssnbchr/bivariate-maps-ggplot2-sf",
+                          "\nAuthors: Timo Grossenbacher",
+                          " (@grssnbchr), Angelo Zehr (@angelozehr)",
+                          "\nGeometries: ThemaKart BFS and swisstopo;",
+                          " Data: ESTV, 2015")
+theme_map <- function(...) {
+  theme_minimal() +
+  theme(
+    text = element_text(family = default_font_family,
+                        color = default_font_color),
+    # remove all axes
+    axis.line = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks = element_blank(),
+    # add a subtle grid
+    panel.grid.major = element_line(color = "#dbdbd9", size = 0.2),
+    panel.grid.minor = element_blank(),
+    # background colors
+    plot.background = element_rect(fill = default_background_color,
+                                   color = NA),
+    panel.background = element_rect(fill = default_background_color,
+                                    color = NA),
+    legend.background = element_rect(fill = default_background_color,
+                                     color = NA),
+    # borders and margins
+    plot.margin = unit(c(.5, .5, .2, .5), "cm"),
+    panel.border = element_blank(),
+    panel.spacing = unit(c(-.1, 0.2, .2, 0.2), "cm"),
+    # titles
+    legend.title = element_text(size = 11),
+    legend.text = element_text(size = 9, hjust = 0,
+                               color = default_font_color),
+    plot.title = element_text(size = 15, hjust = 0.5,
+                              color = default_font_color),
+    plot.subtitle = element_text(size = 10, hjust = 0.5,
+                                 color = default_font_color,
+                                 margin = margin(b = -0.1,
+                                                 t = -0.1,
+                                                 l = 2,
+                                                 unit = "cm"),
+                                 debug = F),
+    # captions
+    plot.caption = element_text(size = 7,
+                                hjust = .5,
+                                margin = margin(t = 0.2,
+                                                b = 0,
+                                                unit = "cm"),
+                                color = "#939184"),
+    ...
+  )
+}
+```
+
+```{r thematic-univariate-map, echo=TRUE, message=FALSE, warning=FALSE}
+require(BAMMtools)
+# define number of classes
+no_classes <- 5
+
+# extract quantiles
+quantiles <- data %>%
+              drop_na(T_Homicidios) %>%
+               pull(T_Homicidios) %>%
+                getJenksBreaks(., k = no_classes) %>%
+                 as.vector() # to remove names of quantiles, so idx below is numeric
+
+# here we create custom labels
+labels <- imap_chr(quantiles, function(., idx){
+  return(paste0(format(quantiles[idx], nsmall = 3, digits = 2),
+                             "k",
+                             " – ",
+                             format(quantiles[idx + 1], nsmall = 3, digits = 2),
+                             "k"))
+})
+
+# we need to remove the last label 
+# because that would be something like "478k - NA"
+labels <- labels[1:length(labels) - 1]
+
+# here we actually create a new 
+# variable on the dataset with the quantiles
+shape_municipios %<>%
+  mutate(homicidios_breaks = cut(Total_Homcidios,
+                                  breaks = quantiles,
+                                   labels = labels,
+                                    include.lowest = T))
+table(shape_municipios@data$homicidios_breaks)
+```
+
+
+```{r}
+ggplot() +
+   # use thicker white stroke for cantonal borders
+  geom_sf(data = st_as_sf(shape_municipios),
+          aes(fill = homicidios_breaks,
+              color = homicidios_breaks),
+           #color = "white",
+               linewidth = 0.002,
+                size = 0.001) +
+   geom_sf(data = st_as_sf(shape_estados),
+          fill = "transparent",
+          color = "white") +
+  # use the Viridis color scale
+  scale_fill_viridis(option = "magma",
+                     name = "Average\nincome in CHF",
+                     alpha = 0.8, # make fill a bit brighter
+                     begin = 0.1, # this option seems to be new (compared to 2016):
+                       # with this we can truncate the color scale, so that extreme colors (very dark and very bright) are not used, which makes the map a bit more aesthetic
+                      end = 0.9,
+                      discrete = T, # discrete classes, thus guide_legend instead of _colorbar
+                      direction = 1, # dark is lowest, yellow is highest
+                      na.value = "#C4C2C1",
+                      guide = guide_legend(keyheight = unit(5, units = "mm"),
+                                           title.position = "top",
+                                           reverse = T # display highest income on top
+                                            )
+                       ) +
+  scale_color_viridis(option = "magma",
+                     name = "Average\nincome in CHF",
+                     alpha = 0.8, # make fill a bit brighter
+                     begin = 0.1, # this option seems to be new (compared to 2016):
+                       # with this we can truncate the color scale, so that extreme colors (very dark and very bright) are not used, which makes the map a bit more aesthetic
+                      end = 0.9,
+                      discrete = T, # discrete classes, thus guide_legend instead of _colorbar
+                      direction = 1, # dark is lowest, yellow is highest
+                      na.value = "#C4C2C1",
+                      guide = guide_legend(keyheight = unit(5, units = "mm"),
+                                           title.position = "top",
+                                           reverse = T # display highest income on top
+                                            )
+                       ) +
+  # add titles
+  labs(x = NULL,
+       y = NULL,
+       title = "Switzerland's regional income",
+       subtitle = "Average yearly income in Swiss municipalities, 2015",
+       caption = default_caption) +
+  # add theme
+  theme_map()
+```
+
+

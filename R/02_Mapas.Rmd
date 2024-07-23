@@ -1,0 +1,161 @@
+---
+title: "Capas de México"
+author: "Diana Villasana Ocampo"
+output:
+   html_notebook:
+      highlight: tango
+      theme: flatly
+      toc: yes
+      toc_depth: 3
+      toc_float:
+        collapsed: yes
+---
+
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache = FALSE, cache.lazy = FALSE, 
+                         eval = TRUE, class.source = "fold-show")
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+options(digits = 2, encoding = "UTF8")
+```   
+ 
+
+```{r, echo=FALSE}
+rm(list = ls())
+```
+
+```{r, echo=FALSE}
+setwd(here::here())
+```
+
+```{r, echo = FALSE, results=FALSE}
+require(geojsonio)
+require(rgdal)
+require(sp)             # Classes and Methos for Spatial Data
+require(spdplyr)        #Data manipulation verbs for the sptial classes
+require(tidyverse) 
+require(dplyr)
+```
+
+## MGN 2023   
+
+El Marco Geoestadístico Nacional (MGN) del INEGI (Instituto Nacional de Estadística y Geografía) en México es una estructura de referencia espacial que permite la recopilación, organización, análisis y presentación de información geográfica y estadística del país. Este marco es fundamental para la generación de datos precisos y consistentes que son utilizados en diversos ámbitos, como la planificación, la investigación, la toma de decisiones y la formulación de políticas públicas.   
+
+**Componentes del MGN**:   
+
+1. División Político-Administrativa: Incluye la delimitación geográfica de entidades federativas, municipios, localidades y áreas metropolitanas.  
+2. División Geoestadística: Comprende áreas geoestadísticas básicas (AGEB), manzanas y tramos, que facilitan la desagregación de información a niveles más detallados.   
+3. Referencias Geográficas: Incorporación de elementos geográficos como ríos, carreteras, montañas, entre otros, que ayudan en la contextualización y análisis espacial.  
+
+**Funciones del MGN**:  
+
+- `Censo y Encuestas`: Utilizado para llevar a cabo censos de población y vivienda, así como encuestas socioeconómicas y demográficas.  
+- `Planificación y Gestión Territorial`: Apoya en la gestión del territorio y la planificación de infraestructura y servicios públicos.   
+- `Análisis Geoespacial`: Facilita estudios y análisis relacionados con la distribución espacial de fenómenos demográficos, económicos y ambientales.   
+- `Visualización de Datos`: Permite la creación de mapas y visualizaciones que representan información estadística de manera accesible y comprensible.  
+
+**Actualización y Acceso**:  
+
+El MGN se actualiza periódicamente para reflejar cambios en la geografía y demografía del país. Los datos y mapas del MGN están disponibles a través de la plataforma digital del INEGI, permitiendo su acceso y uso por parte de instituciones, investigadores y el público en general.  
+
+
+```{r, results=FALSE, class.source = "fold-show"}
+## Entidad Federativa7
+shape_estados_2023 <- readOGR(dsn ="D:/MGN/MGN 2023/conjunto_de_datos", 
+                               layer = "00ent",
+                                encoding = "UTF-8",
+                                 use_iconv = TRUE)
+shape_estados_2023@data <- shape_estados_2023@data %>%
+                            dplyr::select(CVE_ENT)
+
+## Municipios
+shape_municipios_2023 <- readOGR(dsn ="D:/MGN/MGN 2023/conjunto_de_datos", 
+                                  layer = "00mun",
+                                   encoding = "UTF-8",
+                                    use_iconv = TRUE)
+
+shape_municipios_2023@data <- shape_municipios_2023@data %>%
+                               dplyr::select(CVEGEO, CVE_ENT) %>%
+                                rename("CVE_MUN" = "CVEGEO")
+```
+
+```{r}
+tablas <- c("2023")
+for(i in 1){
+  assign(paste0("shape_estados_", tablas[i]), get(paste0("shape_estados_", tablas[i])) %>%
+                                               sp::spChFIDs(., str_pad(.@data$CVE_ENT, 2, "left", pad = "0")))
+  assign(paste0("shape_municipios_", tablas[i]), get(paste0("shape_municipios_", tablas[i])) %>%
+                                                  sp::spChFIDs(., str_pad(.@data$CVE_MUN, 5, "left", pad = "0")))
+}
+```
+
+## GeoJSON 
+
+Se convierten las capas de polígonos filtrados en objetos GeoJSON. 
+
+- `geojsonio::geojson_json`: Esta función convierte un objeto espacial a formato GeoJSON.  
+- `geometry = "polygon"`: Especifica que las geometrías deben ser de tipo polígono. Esto es adecuado para las entidades geográficas de los estados que generalmente se representan como polígonos.  
+- `geojsonio::geojson_write`: Esta función escribe un objeto GeoJSON a un archivo.  
+
+```{r, eval = FALSE}
+require(geojsonio)
+
+# Nivel entidad
+for(i in 1){
+  assign(paste0("capa_estados_", tablas[i], "_json"), geojsonio::geojson_json(get(paste0("shape_estados_", tablas[i])), geometry = "polygon"))
+}
+
+# Nivel municipio
+for(i in 1){
+  assign(paste0("capa_municipios_", tablas[i], "_json"), geojsonio::geojson_json(get(paste0("shape_municipios_", tablas[i])), geometry = "polygon"))
+}
+```
+
+## Guardan los archivos `.GeoJSON`
+
+```{r}
+# Archivo GeoJSON
+for(i in 1){
+  geojsonio::geojson_write(get(paste0("capa_estados_", tablas[i], "_json")), file = paste0(here::here(), "/Output/capa_estados_", tablas[i], "_json.geojson"))
+  geojsonio::geojson_write(get(paste0("capa_municipios_", tablas[i], "_json")), file = paste0(here::here(), "/Output/capa_municipios_", tablas[i], "_json.geojson"))
+}
+```
+
+
+## Continuo de Elevaciones Mexicano (CEM) 
+
+
+El Continuo de Elevaciones Mexicano (CEM) es un conjunto de datos topográficos desarrollados por el Instituto Nacional de Estadística y Geografía (INEGI) en México. El CEM proporciona información detallada sobre la elevación del terreno en todo el país, lo que es crucial para diversos estudios y aplicaciones en geografía, medio ambiente, ingeniería y planificación territorial.  
+
+**Características del CEM**:
+
+1. Modelo Digital de Elevación (MDE): El CEM se basa en modelos digitales de elevación, que son representaciones tridimensionales del terreno. Estos modelos permiten visualizar y analizar la superficie terrestre con gran precisión.   
+2. Resolución Espacial: Los datos del CEM tienen una alta resolución espacial, lo que permite identificar detalles topográficos finos. La resolución típica puede variar, pero suele ser en el rango de los metros, dependiendo de la región y las necesidades específicas del estudio.  
+3. Cobertura Nacional: El CEM cubre todo el territorio nacional, proporcionando un conjunto de datos unificado y coherente para todo México.   
+
+**Usos del CEM**:   
+- `Planificación y Gestión de Recursos Naturales`: El CEM es utilizado para la gestión de recursos hídricos, la planificación de infraestructuras y la gestión de áreas protegidas.   
+- `Estudios Ambientales`: Facilita el análisis de riesgos naturales, como inundaciones, deslizamientos de tierra y la erosión del suelo.   
+- `Ingeniería y Construcción`: Es fundamental para el diseño y construcción de obras civiles, incluyendo carreteras, puentes y edificios.   
+- `Investigación Científica`: Apoya investigaciones en geografía, geología, ecología y otras disciplinas científicas.  
+- `Desarrollo Urbano`: Ayuda en la planificación urbana y rural, proporcionando datos esenciales para la zonificación y el desarrollo de infraestructuras.  
+
+**Acceso y Disponibilidad**:  
+
+El INEGI pone a disposición del público los datos del CEM a través de su plataforma digital. Los usuarios pueden acceder y descargar estos datos para utilizarlos en sus propios proyectos y análisis.  
+
+```{r, message=FALSE, warning=FALSE} 
+require(raster)
+require(terra)
+CEM <- raster("D:/CEM/Nacional15_r30m.tif")
+```
+
+```{r}
+library(sf)
+library(gdalUtilities)
+
+gdal_translate(src_dataset = "D:/CEM/Nacional15_r30m.tif",
+               dst_dataset = "D:/CEM/Nacional15_r30m.asc",
+               of = "AAIGrid")
+```
+

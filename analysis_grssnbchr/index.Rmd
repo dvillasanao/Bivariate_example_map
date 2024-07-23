@@ -277,6 +277,7 @@ In the following chunk, the municipality geodata is extended (joined) with the t
 ```{r join data into shapefiles, echo=TRUE, message=FALSE, warning=FALSE}
 municipality_prod_geo %<>%
   left_join(data, by = c("BFS_ID" = "bfs_id"))
+
 class(municipality_prod_geo)
 ```
 

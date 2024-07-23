@@ -133,6 +133,7 @@ Para evaluar la tasa de homicdios y de feminicidios, se debe de tomar en conside
 
 ```{r}
 require(openxlsx)
+require(stringr)
 tabla1 <- read.xlsx(paste0(here::here(), "/Bases/Proyecciones de la Población de México.xlsx"), 
                     sheet = "Proyeciones_Municipio(1)", 
                     startRow = 5, 
@@ -142,18 +143,18 @@ tabla2 <- read.xlsx(paste0(here::here(), "/Bases/Proyecciones de la Población d
                     startRow = 5, 
                     colNames = TRUE)
 
-data <- rbind(tabla1, tabla2)
+poblacion <- rbind(tabla1, tabla2)
 
-data <- data %>%
-         rename("CVE_MUN" = "CLAVE",
-                "CVE_ENT" = "CLAVE_ENT") %>% 
-          mutate(CVE_ENT = str_pad(.$CVE_ENT, width = 2, side = c("left"), pad = 0),
-                 CVE_MUN = str_pad(.$CVE_MUN, width = 5, side = c("left"), pad = 0))
-data <- data %>%
-         group_by(CVE_MUN, AÑO) %>%
-          summarise(POB_TOT = sum(POB, na.rm = TRUE), .groups = "drop") %>%
-           filter(AÑO %in% 2023)
+poblacion <- poblacion %>%
+              rename("CVE_MUN" = "CLAVE",
+                     "CVE_ENT" = "CLAVE_ENT") %>% 
+               mutate(CVE_ENT = str_pad(.$CVE_ENT, width = 2, side = c("left"), pad = 0),
+                      CVE_MUN = str_pad(.$CVE_MUN, width = 5, side = c("left"), pad = 0))
+poblacion <- poblacion %>%
+              group_by(CVE_MUN, AÑO) %>%
+               summarise(POB_TOT = sum(POB, na.rm = TRUE), .groups = "drop") %>%
+                filter(AÑO %in% 2023)
 
-save(data, file = paste0(here::here(), "/Output/Proyecciones_Poblacion.RData"))
+save(poblacion, file = paste0(here::here(), "/Output/Proyecciones_Poblacion.RData"))
 ```
 
