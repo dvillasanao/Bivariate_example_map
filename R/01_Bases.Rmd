@@ -14,7 +14,7 @@ output:
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache = FALSE, cache.lazy = FALSE, 
-                         eval = TRUE, class.source = "fold-show")
+                         eval = FALSE, class.source = "fold-show")
 knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 options(digits = 2, encoding = "UTF8")
 ```   
@@ -35,6 +35,7 @@ require(data.table)
 require(stringr)
 require(gt)
 ```
+
 # Incidencia delictiva   
 
 Son los datos reportados por las Procuradurías de Justicia y Fiscalías Generales de las Entidades Federativas, en el caso del fuero común y por la Procuraduría General de la República, en el caso del fuero federal, referentes a los presuntos delitos registrados en carpetas de investigación iniciadas.  
@@ -157,4 +158,7 @@ poblacion <- poblacion %>%
 
 save(poblacion, file = paste0(here::here(), "/Output/Proyecciones_Poblacion.RData"))
 ```
+
+
+
 

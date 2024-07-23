@@ -14,7 +14,7 @@ output:
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache = FALSE, cache.lazy = FALSE, 
-                         eval = TRUE, class.source = "fold-show")
+                         eval = FALSE, class.source = "fold-show")
 knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 options(digits = 2, encoding = "UTF8")
 ```   
@@ -59,8 +59,8 @@ El Marco Geoestadístico Nacional (MGN) del INEGI (Instituto Nacional de Estadí
 El MGN se actualiza periódicamente para reflejar cambios en la geografía y demografía del país. Los datos y mapas del MGN están disponibles a través de la plataforma digital del INEGI, permitiendo su acceso y uso por parte de instituciones, investigadores y el público en general.  
 
 
-```{r, results=FALSE, class.source = "fold-show"}
-## Entidad Federativa7
+```{r shapes, results=FALSE, echo = TRUE}
+## Entidad Federativa  
 shape_estados_2023 <- readOGR(dsn ="D:/MGN/MGN 2023/conjunto_de_datos", 
                                layer = "00ent",
                                 encoding = "UTF-8",
@@ -68,7 +68,7 @@ shape_estados_2023 <- readOGR(dsn ="D:/MGN/MGN 2023/conjunto_de_datos",
 shape_estados_2023@data <- shape_estados_2023@data %>%
                             dplyr::select(CVE_ENT)
 
-## Municipios
+## Municipios   
 shape_municipios_2023 <- readOGR(dsn ="D:/MGN/MGN 2023/conjunto_de_datos", 
                                   layer = "00mun",
                                    encoding = "UTF-8",
@@ -79,7 +79,9 @@ shape_municipios_2023@data <- shape_municipios_2023@data %>%
                                 rename("CVE_MUN" = "CVEGEO")
 ```
 
-```{r}
+
+
+```{r idlayers}
 tablas <- c("2023")
 for(i in 1){
   assign(paste0("shape_estados_", tablas[i]), get(paste0("shape_estados_", tablas[i])) %>%
