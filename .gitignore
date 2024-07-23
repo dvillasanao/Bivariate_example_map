@@ -58,3 +58,4 @@ output/ignore/*
 input/ignore/*
 index_files/*
 Bases/
+README.Rmd
