@@ -54,8 +54,7 @@ options(Ncpus = 8)
 
 El Secretariado Ejecutivo del Sistema Nacional de Seguridad Pública (SESNSP) es una entidad del gobierno de México encargada de coordinar y supervisar las políticas y estrategias de seguridad pública a nivel nacional. Su función principal es asegurar la colaboración efectiva entre las diversas instituciones de seguridad y justicia del país, así como recopilar y analizar datos sobre delitos y violencia para diseñar e implementar políticas de seguridad más efectivas y basadas en evidencia.  
 
-Se cargan las bases de datos que contienen el total de homicidios dolosos y feminicidios reportados a nivel municipal en el 2023. Esta base obtenida del Secretariado Ejecutivo del Sistema Nacional de Seguridad Pública esta sujeta a actualizaciones constantes, por lo que los datos del 2023 pueden ir cambiando.     
-Además se consideran a las proyecciones de población a nivel municipal para el año 2023, elaboradas por el CONAPO.      
+Se cargan las bases de datos que contienen el total de homicidios dolosos y feminicidios reportados a nivel municipal en el 2023. Esta base obtenida del Secretariado Ejecutivo del Sistema Nacional de Seguridad Pública esta sujeta a actualizaciones constantes, por lo que los datos del 2023 pueden ir cambiando. Aunado a esto, se consideran a las proyecciones de población a nivel municipal para el año 2023, elaboradas por el CONAPO.      
  
  
 ```{r}
@@ -380,8 +379,10 @@ knitr::include_graphics(paste0(here::here(), "/Output/Mapa de homicidios y femin
 
 ## Referencias
 
-Chris-Prener/Biscale: Bivariate Mapping with Ggplot2, 2022.  
+Chris-Prener/Biscale: Bivariate Mapping with Ggplot2, 2022.   
 Bivariate Maps with Ggplot2 and Sf, 2019, Grossenbacher Timo. Retrieved June 2024, from https://timogrossenbacher.ch/author/timo/.   
+Datos Abiertos de Incidencia Delictiva | Secretariado Ejecutivo Del Sistema Nacional de Seguridad Pública | Gobierno | Gob.Mx, 2024.   
+Reconstrucción y Proyecciones de La Población de Los Municipios de México 1990-2040 | Consejo Nacional de Población | Gobierno | 2024.    
 
 
 ## Librerías
