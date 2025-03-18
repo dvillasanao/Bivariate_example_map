@@ -14,6 +14,12 @@ works of Timo Grossenbacher and Christopher Prener. The case study
 focuses on the municipal-level homicide and femicide rates in Mexico for
 the year 2023.
 
+<div style="display: flex; justify-content: center; gap: 10px;">
+
+<img src="Output/Mapa de homicidios y feminicidios 2023.png" width="70%" style="margin: 1px;">
+
+</div>
+
 ## Blog Post and Tutorials
 
 The following resources provide comprehensive tutorials on creating
