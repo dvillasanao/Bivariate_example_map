@@ -46,6 +46,7 @@ require(sp)             # Classes and Methos for Spatial Data
 require(spdplyr)
 require(raster)
 require(viridis)
+require(stringr)
 require(cowplot)
 options(Ncpus = 8)
 ```
@@ -203,6 +204,9 @@ Se clasifican los datos de homicidios en diferentes categorías (breaks) utiliza
 
 ```{r thematic-univariate-map, echo=TRUE, message=FALSE, warning=FALSE}
 require(BAMMtools)
+require(tidyr)
+require(purrr)
+
 # define number of classes
 no_classes <- 5
 
@@ -235,7 +239,7 @@ shape_municipios %<>%
                                     include.lowest = T))
 ```
 
-```{r, warning=FALSE, message=FALSE}
+```{r, warning=FALSE, message=FALSE, class.source = "fold-hide"}
 ggplot() +
   # use thicker white stroke for borders
   geom_sf(data = st_as_sf(shape_municipios),
@@ -284,6 +288,8 @@ ggplot() +
   # add theme
   theme_map()
 ```
+
+
 ## Bivariate map 
 
 **Clasificación bidimensional utilizando el método de Jenks:**  
@@ -324,7 +330,7 @@ paleta <- bi_pal(pal = custom_pal, dim = 3, flip_axes = T, rotate_pal = T)
 Siguiendo la misma estructura que el mapa anterior. Se utiliza como nueva alternativa `bi_scale_color()` que funciona del mismo modo que `bi_scale_fill()`.   
 
 
-```{r, warning=FALSE, message=FALSE}
+```{r, warning=FALSE, message=FALSE, class.source = "fold-hide"}
 # create map
 map <- ggplot() +
         geom_sf(data = st_as_sf(shape_municipios), 
