@@ -47,3 +47,15 @@ Mexico for 2023.
   creation.  
 - `Output`: Contains the generated maps and visualizations.  
 - `README.md`: This file.
+
+## References
+
+- Executive Secretariat of the National System of Public Security
+  (SESNSP)
+
+## Code of Conduct
+
+Please note that the Bivariate_example_map project is published with a
+[Contributor Code of
+Conduct](https://contributor-covenant.org/version/2/1/CODE_OF_CONDUCT.html).
+By contributing to this project, you agree to abide by its terms.
